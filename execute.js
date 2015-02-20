@@ -237,8 +237,10 @@ function simulate_sysbench_execute(num_workload_threads, num_collections, num_do
 
 
 // execute workload
+var collection_count = 16
+var docs_per_collection = 20000000
 var thread_count = 64
-//var thread_count = 7
+//thread_count = 7
 simulate_sysbench_execute(thread_count, collection_count, docs_per_collection)
 
 
