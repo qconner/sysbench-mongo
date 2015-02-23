@@ -14,13 +14,13 @@ function workload(num_collections, num_docs_per_collection, randSeed) {
 
     var count = 0
     while (count < iterationsDesired) {
-        pointSelect(mydb, num_collections, num_docs_per_collection)
-        simpleRange(mydb, num_collections, num_docs_per_collection)
-        sumRange(mydb, num_collections, num_docs_per_collection)
-        distinctRange(mydb, num_collections, num_docs_per_collection)
-        indexUpdate(mydb, num_collections, num_docs_per_collection)
-        nonIndexUpdate(mydb, num_collections, num_docs_per_collection)
-        oltpInsert(mydb, num_collections, num_docs_per_collection)
+        pointSelect(mydb, num_collections, num_docs_per_collection - 1)
+        simpleRange(mydb, num_collections, num_docs_per_collection - 1)
+        sumRange(mydb, num_collections, num_docs_per_collection - 1)
+        distinctRange(mydb, num_collections, num_docs_per_collection - 1)
+        indexUpdate(mydb, num_collections, num_docs_per_collection - 1)
+        nonIndexUpdate(mydb, num_collections, num_docs_per_collection - 1)
+        oltpInsert(mydb, num_collections, num_docs_per_collection - 1)
 
         count++
     }
@@ -41,7 +41,7 @@ function workload(num_collections, num_docs_per_collection, randSeed) {
             var myID = Math.round(random() * num_docs_per_collection)
             var doc = coll.findOne({_id: myID}, {c: 1, _id: 0})
             if (doc == null)
-                print('could not find document with _id', myID, 'in collection', coll)
+                print('ps: could not find document with _id', myID, 'in collection', coll)
         }
     }
 
@@ -59,7 +59,7 @@ function workload(num_collections, num_docs_per_collection, randSeed) {
 
             var curs = coll.find({_id: {"$gte": startID, "$lte": endID}}, {c: 1, _id: 0})
             if (curs == null) {
-                print('could not find documents with _id between', startID, 'and', endID, 'in collection', coll)
+                print('sr: could not find documents with _id between', startID, 'and', endID, 'in collection', coll)
             }
             else
                 while (curs.hasNext())
@@ -82,7 +82,7 @@ function workload(num_collections, num_docs_per_collection, randSeed) {
 
             var curs = coll.aggregate( [ {$match: {_id: {$gte: startID, $lte: endID}}}, {$project: {k: 1, _id: 0}}, {$group: {_id: null, average: {$sum: "$k"}}} ] )
             if (curs == null) {
-                print('could not find documents with _id between', startID, 'and', endID, 'in collection', coll)
+                print('mr: could not find documents with _id between', startID, 'and', endID, 'in collection', coll)
             }
             else {
                 while (curs.hasNext()) {
@@ -107,7 +107,7 @@ function workload(num_collections, num_docs_per_collection, randSeed) {
 
             var results = coll.distinct("c", {_id: {"$gte": startID, "$lte": endID}}).sort()
             if (results == null) {
-                print('could not find documents with _id between', startID, 'and', endID, 'in collection', coll)
+                print('dr: could not find documents with _id between', startID, 'and', endID, 'in collection', coll)
             }
         }
     }
@@ -144,7 +144,6 @@ function workload(num_collections, num_docs_per_collection, randSeed) {
         for (var j=0; j < non_index_updates; j++) {
             var myID = Math.round(random() * num_docs_per_collection)
             var newcval = sysbenchString()
-            //print("new cval:", newcval)
             var writeResult = coll.update({_id: myID}, {$set: {c: newcval}})
             if (writeResult == null) {
                 print('niu: update operation failed')
@@ -156,6 +155,8 @@ function workload(num_collections, num_docs_per_collection, randSeed) {
             else if (writeResult.nModified != 1) {
                 print('niu: could not update document with _id', myID, 'in collection', coll)
                 print(tojson(writeResult))
+                print("new c value:", newcval)
+                print(tojson(coll.findOne({_id: myID})))
             }
         }
     }
@@ -176,12 +177,8 @@ function workload(num_collections, num_docs_per_collection, randSeed) {
             if (removeResult == null) {
                 print('oltp: remove operation failed')
             }
-            else if (removeResult.nMatched != 1) {
-                print('oltp: could not find document with _id', myID, 'in collection', coll)
-                print(tojson(removeResult))
-            }
-            else if (removeResult.nModified != 1) {
-                print('oltp: could not update document with _id', myID, 'in collection', coll)
+            else if (removeResult.nRemoved != 1) {
+                print('oltp: could not remove document with _id', myID, 'in collection', coll)
                 print(tojson(removeResult))
             }
 
@@ -227,8 +224,9 @@ function simulate_sysbench_execute(num_workload_threads, num_collections, num_do
     var threads = []
     print('\nstarting', num_workload_threads, 'threads')
 
+    var t = Math.round(Date.now() / num_workload_threads)
     for (var i = 0; i < num_workload_threads; i++) {
-        threads[i] = new ScopedThread(workload, num_collections, num_docs_per_collection, 11 + i)
+        threads[i] = new ScopedThread(workload, num_collections, num_docs_per_collection, (i+1) * t)
         threads[i].start()
     }
 
