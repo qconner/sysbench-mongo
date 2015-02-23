@@ -1,7 +1,6 @@
 'use strict';
  
-load('/Users/quentin/src/mongo/jstests/libs/parallelTester.js');
-//load('parallelTester.js');
+load('parallelTester.js');
 
 
 function workload(num_collections, num_docs_per_collection, randSeed) {

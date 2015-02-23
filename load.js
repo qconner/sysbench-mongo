@@ -1,7 +1,6 @@
 'use strict';
  
-load('/Users/quentin/src/mongo/jstests/libs/parallelTester.js');
-//load('parallelTester.js');
+load('parallelTester.js');
 
 function insert(myCollection, desired, randSeed) {
     var batchSize = 1000
