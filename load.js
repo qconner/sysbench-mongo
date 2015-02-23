@@ -63,7 +63,7 @@ function simulate_sysbench_load(num_collections, num_docs_per_collection) {
     var threads = []
 
     print('\nloading new collections:')
-    var t = Math.round(Date.now() / num_workload_threads)
+    var t = Math.round(Date.now() / num_collections)
     for (var offset=0; offset < num_collections; offset++) {
         var n = offset + 1
         var s = 'sbtest' + n
