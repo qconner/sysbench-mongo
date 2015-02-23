@@ -3,33 +3,44 @@
 load('/Users/quentin/src/mongo/jstests/libs/parallelTester.js');
 //load('parallelTester.js');
 
-function insert(myCollection, desired) {
+function insert(myCollection, desired, randSeed) {
     var batchSize = 1000
-    print(myCollection)
+
+    print('bulk loading ' + desired + ' documents to ' + myCollection + ' with batch size of ' + batchSize)
     var count = 0
+
     var mydb = db.getSiblingDB('sbtest')
+
+    var seed = randSeed
+
     while (count < desired) {
         var bulk = mydb.getCollection(myCollection).initializeUnorderedBulkOp();
         for (var j=0; j < batchSize; count++, j++) {
-            var k = Math.round(Random.rand()*10000000)
+            var k = Math.round(random()*10000000)
             var c = sysbenchString()
-            var pad = '' + Math.round(Random.rand()*100000000000)
+            var pad = '' + Math.round(random()*100000000000)
             for (var y = 0; y < 4; y++)
-                pad += '-' + Math.round(Random.rand()*100000000000)
+                pad += '-' + Math.round(random()*100000000000)
             var d = { _id: count, k: k, c: c, pad: pad }
             //print(tojson(d))
             bulk.insert(d)
         }
         bulk.execute();
     }
-    // create indexs
+    // create indexes
     mydb.getCollection(myCollection).ensureIndex({k: 1})
 
     function sysbenchString() {
-        var s = '' + Math.round(Random.rand()*100000000000)
+        var s = '' + Math.round(random()*100000000000)
         for (var x = 0; x < 8; x++)
-            s += '-' + Math.round(Random.rand()*100000000000)
+            s += '-' + Math.round(random()*100000000000)
         return s
+    }
+
+    // PRNG borrowed from http://stackoverflow.com/questions/521295/javascript-random-seeds
+    function random() {
+        var x = Math.sin(seed++) * 10000
+        return x - Math.floor(x)
     }
 
 }
@@ -70,7 +81,7 @@ function simulate_sysbench_load(num_collections, num_docs_per_collection) {
 // load data
 var collection_count = 16
 var docs_per_collection = 20000000
-//var docs_per_collection = 8000
+//docs_per_collection = 80000
 simulate_sysbench_load(collection_count, docs_per_collection)
 
  
