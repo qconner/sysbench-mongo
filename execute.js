@@ -1,11 +1,7 @@
-'use strict';
- 
-load('parallelTester.js');
 
 
 function workload(num_collections, num_docs_per_collection, randSeed) {
     var iterationsDesired = 2000
-    //iterationsDesired = 100
 
     var mydb = db.getSiblingDB('sbtest')
 
@@ -13,13 +9,13 @@ function workload(num_collections, num_docs_per_collection, randSeed) {
 
     var count = 0
     while (count < iterationsDesired) {
-        pointSelect(mydb, num_collections, num_docs_per_collection - 1)
-        simpleRange(mydb, num_collections, num_docs_per_collection - 1)
-        sumRange(mydb, num_collections, num_docs_per_collection - 1)
-        distinctRange(mydb, num_collections, num_docs_per_collection - 1)
-        indexUpdate(mydb, num_collections, num_docs_per_collection - 1)
-        nonIndexUpdate(mydb, num_collections, num_docs_per_collection - 1)
-        oltpInsert(mydb, num_collections, num_docs_per_collection - 1)
+        pointSelect(mydb, num_collections, num_docs_per_collection)
+        simpleRange(mydb, num_collections, num_docs_per_collection)
+        sumRange(mydb, num_collections, num_docs_per_collection)
+        distinctRange(mydb, num_collections, num_docs_per_collection)
+        indexUpdate(mydb, num_collections, num_docs_per_collection)
+        nonIndexUpdate(mydb, num_collections, num_docs_per_collection)
+        oltpInsert(mydb, num_collections, num_docs_per_collection)
 
         count++
     }
@@ -37,7 +33,7 @@ function workload(num_collections, num_docs_per_collection, randSeed) {
         var coll = randomCollection(mydb, num_collections)
         // point select (findOne by _id with projection)
         for (var j=0; j < point_selects; j++) {
-            var myID = Math.round(random() * num_docs_per_collection)
+            var myID = Math.round(random() * (num_docs_per_collection - 1))
             var doc = coll.findOne({_id: myID}, {c: 1, _id: 0})
             if (doc == null)
                 print('ps: could not find document with _id', myID, 'in collection', coll)
@@ -53,7 +49,7 @@ function workload(num_collections, num_docs_per_collection, randSeed) {
         var coll = randomCollection(mydb, num_collections)
         // simple range (find using $gte, $lte and projection)
         for (var j=0; j < simple_ranges; j++) {
-            var startID = Math.round(random() * (num_docs_per_collection - range_size))
+            var startID = Math.round(random() * ((num_docs_per_collection - 1) - range_size))
             var endID = startID + range_size - 1
 
             var curs = coll.find({_id: {"$gte": startID, "$lte": endID}}, {c: 1, _id: 0})
@@ -76,7 +72,7 @@ function workload(num_collections, num_docs_per_collection, randSeed) {
 
         // sum range (aggregation using $match, $group, $sum and projection)
         for (var j=0; j < sum_ranges; j++) {
-            var startID = Math.round(random() * (num_docs_per_collection - range_size))
+            var startID = Math.round(random() * ((num_docs_per_collection - 1) - range_size))
             var endID = startID + range_size - 1
 
             var curs = coll.aggregate( [ {$match: {_id: {$gte: startID, $lte: endID}}}, {$project: {k: 1, _id: 0}}, {$group: {_id: null, average: {$sum: "$k"}}} ] )
@@ -101,7 +97,7 @@ function workload(num_collections, num_docs_per_collection, randSeed) {
         var coll = randomCollection(mydb, num_collections)
 
         for (var j=0; j < distinct_ranges; j++) {
-            var startID = Math.round(random() * (num_docs_per_collection - range_size))
+            var startID = Math.round(random() * ((num_docs_per_collection - 1) - range_size))
             var endID = startID + range_size - 1
 
             var results = coll.distinct("c", {_id: {"$gte": startID, "$lte": endID}}).sort()
@@ -118,7 +114,7 @@ function workload(num_collections, num_docs_per_collection, randSeed) {
         var coll = randomCollection(mydb, num_collections)
 
         for (var j=0; j < index_updates; j++) {
-            var myID = Math.round(random() * num_docs_per_collection)
+            var myID = Math.round(random() * (num_docs_per_collection - 1))
             var writeResult = coll.update({_id: myID}, {$inc: {k: 1}})
             if (writeResult == null) {
                 print('iu: update operation failed')
@@ -141,7 +137,7 @@ function workload(num_collections, num_docs_per_collection, randSeed) {
         var coll = randomCollection(mydb, num_collections)
 
         for (var j=0; j < non_index_updates; j++) {
-            var myID = Math.round(random() * num_docs_per_collection)
+            var myID = Math.round(random() * (num_docs_per_collection - 1))
             var newcval = sysbenchString()
             var writeResult = coll.update({_id: myID}, {$set: {c: newcval}})
             if (writeResult == null) {
@@ -170,7 +166,7 @@ function workload(num_collections, num_docs_per_collection, randSeed) {
         var coll = randomCollection(mydb, num_collections)
 
         for (var j=0; j < oltp_inserts; j++) {
-            var myID = Math.round(random() * num_docs_per_collection)
+            var myID = Math.round(random() * (num_docs_per_collection - 1))
 
             var removeResult = coll.remove({_id: myID})
             if (removeResult == null) {
@@ -210,6 +206,9 @@ function workload(num_collections, num_docs_per_collection, randSeed) {
 
     // PRNG borrowed from http://stackoverflow.com/questions/521295/javascript-random-seeds
     function random() {
+        // avoid zero and PI
+        if (seed >= Number.MAX_SAFE_INTEGER || seed < 0.000000001 || Math.abs(seed - Math.PI) < 0.000000001)
+            seed = 1
         var x = Math.sin(seed++) * 10000
         return x - Math.floor(x)
     }
@@ -223,9 +222,9 @@ function simulate_sysbench_execute(num_workload_threads, num_collections, num_do
     var threads = []
     print('\nstarting', num_workload_threads, 'threads')
 
-    var t = Math.round(Date.now() / num_workload_threads)
+    var t = Math.round(Date.now() / (num_workload_threads + 1))
     for (var i = 0; i < num_workload_threads; i++) {
-        threads[i] = new ScopedThread(workload, num_collections, num_docs_per_collection, (i+1) * t)
+        threads[i] = new ScopedThread(workload, num_collections, num_docs_per_collection, (i + 1) * t)
         threads[i].start()
     }
 
@@ -236,14 +235,6 @@ function simulate_sysbench_execute(num_workload_threads, num_collections, num_do
     threads = []
 }
 
-
-// execute workload
-var collection_count = 16
-var docs_per_collection = 20000000
-//docs_per_collection = 80000
-var thread_count = 64
-//thread_count = 7
-simulate_sysbench_execute(thread_count, collection_count, docs_per_collection)
 
 
  

@@ -1,6 +1,3 @@
-'use strict';
- 
-load('parallelTester.js');
 
 function insert(myCollection, desired, randSeed) {
     var batchSize = 1000
@@ -28,7 +25,7 @@ function insert(myCollection, desired, randSeed) {
     }
 
     // create indexes
-    print('creating index')
+    print('creating index on', myCollection)
     mydb.getCollection(myCollection).ensureIndex({k: 1})
 
     function sysbenchString() {
@@ -40,16 +37,18 @@ function insert(myCollection, desired, randSeed) {
 
     // PRNG borrowed from http://stackoverflow.com/questions/521295/javascript-random-seeds
     function random() {
+        // avoid zero and PI
+        if (seed >= Number.MAX_SAFE_INTEGER || seed < 0.000000001 || Math.abs(seed - Math.PI) < 0.000000001)
+            seed = 1
         var x = Math.sin(seed++) * 10000
         return x - Math.floor(x)
     }
-
 }
 
 
 function simulate_sysbench_load(num_collections, num_docs_per_collection) {
     // data load phase
-    print("creating data for", num_collections, " collections")
+    print("creating data for", num_collections, "collections")
 
     // drop old collections
     print('dropping old collections:')
@@ -77,16 +76,6 @@ function simulate_sysbench_load(num_collections, num_docs_per_collection) {
     });
     threads = []
 }
-
-
-
-// load data
-var collection_count = 16
-var docs_per_collection = 20000000
-//docs_per_collection = 80000
-simulate_sysbench_load(collection_count, docs_per_collection)
-
- 
 
 
 
