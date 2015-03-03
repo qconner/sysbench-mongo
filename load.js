@@ -24,10 +24,6 @@ function insert(myCollection, desired, randSeed) {
         bulk.execute();
     }
 
-    // create indexes
-    print('creating index on', myCollection)
-    mydb.getCollection(myCollection).ensureIndex({k: 1})
-
     function sysbenchString() {
         var s = '' + Math.round(random()*100000000000)
         for (var x = 0; x < 8; x++)
@@ -58,6 +54,10 @@ function simulate_sysbench_load(num_collections, num_docs_per_collection) {
         print(s)
         mydb.getCollection(s).drop()
     }
+
+    // create indexes first
+    print('creating index on', s)
+    mydb.getCollection(s).ensureIndex({k: 1})
 
     var threads = []
 
